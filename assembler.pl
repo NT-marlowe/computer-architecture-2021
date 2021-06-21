@@ -39,6 +39,7 @@ while ($line = <FH>) {
     $f5 = @instruction[4];
   }
   # 機械語の出力
+  # 上から順に，オペコード・オペランド・AUX
   if ($op eq "add"){
     p_b(6,0); 
     p_r3($f2, $f3, $f4); 
@@ -128,8 +129,9 @@ while ($line = <FH>) {
   elsif ($op eq "lw"){
     p_b(6,16); 
     p_r2i($f2, base($f3)); 
-    p_b(16, dpl($f3));print("\n");
-    }
+    p_b(16, dpl($f3));
+    print("\n");
+  }
   elsif ($op eq "lh"){
     p_b(6,18); 
     p_r2i($f2, base($f3)); 
@@ -199,6 +201,12 @@ while ($line = <FH>) {
     p_b(11, 0);
     print("\n");
   }  
+  elsif ($op eq "bgt0_sub"){
+    p_b(6, 36); # 番号はよくわからん
+    p_r2b($f2, $f3);
+    p_b(16, $labels{$f4}-$i-1);
+    print("\n");
+  }
   else {
     print("ERROR: Illegal Instruction\n");
   }
@@ -209,6 +217,7 @@ close(FH);
 
 sub p_b{
   #  $numを2進数$digitsに変換して出力
+  # 10進数$numを2進表記で$digits桁にして出力．足りない部分は0埋め．
   ($digits, $num) = @_;
   if ($num >= 0) {
     printf("%0".$digits."b_", $num);
@@ -219,7 +228,8 @@ sub p_b{
   }
 }
   
-sub p_r3{#R型のレジスタ番地を出力
+sub p_r3{
+  #R型のレジスタ番地を出力
   ($rd, $rs, $rt) = @_;
   $rs =~ s/r//; 
   p_b(5, $rs);

@@ -8,3 +8,23 @@
 
 課題2
 sample_orderに1＋1＝2を行うアセンブリ命令を残す．
+
+課題3
+3.1
+名称、アセンブリ言語による表現、動作、書式、コードを定めよ．
+
+名称：bgt0_sub
+ニーモニック：bg0t_sub (branch-0 sub)
+アセンブリ言語による表現： bg0t_sub rt, rs, dpl
+動作：
+rt <- rt - rs;
+if (rt>0)    PC <-PC+dpl      else      PC <-PC + 1;
+書式はよくわからん．
+
+コード
+sub rt, rt, rs    //rt = rt - rs
+blt r0, rt, dpl   //if r0(=0) < rt : PC = PC + dpl
+ble rt, r0, 1     //if rt <= r0(=0) : PC = PC + 1
+
+
+
