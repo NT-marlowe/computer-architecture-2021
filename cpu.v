@@ -6,42 +6,43 @@ module fetch (pc, ins);
 endmodule
 
 module execute (clk, ins, pc, reg1, reg2, wra, result, nextpc);
-  input clk;
-  input [31:0] ins, pc, reg1, reg2;
-  output [4:0] wra;
-  output [31:0] result, nextpc;
-  wire [5:0] 	 op;
-  wire [4:0] 	 shift, operation;
-  wire [25:0] 	 addr;
-  wire [31:0] 	 dpl_imm, operand2, alu_result, nonbranch, branch, mem_address, dm_r_data;
-  wire [3:0] 	 wren;
+	input clk;
+	input [31:0] ins, pc, reg1, reg2;
+	output [4:0] wra;
+	output [31:0] result, nextpc;
+	wire [5:0] 	 op;
+	wire [4:0] 	 shift, operation;
+	wire [25:0] 	 addr;
+	wire [31:0] 	 dpl_imm, operand2, alu_result, nonbranch, branch, mem_address, dm_r_data;
+	wire [3:0] 	 wren;
 
-  function [4:0] opr_gen;
-    input [5:0] op;
-    input [4:0] operation;
-    case (op)
-      6'd0: opr_gen = operation;
-      6'd1: opr_gen = 5'd0;
-      6'd4: opr_gen = 5'd8;
-      6'd5: opr_gen = 5'd9;
-      6'd6: opr_gen = 5'd10;
-      default: opr_gen = 5'h1f;
-    endcase
+  	function [4:0] opr_gen; 	// 出力にどんな演算結果を渡すのかを決める(加算，減算など)
+		input [5:0] op;        
+		input [4:0] operation;
+		case (op)				//　アセンブラで指定した命令番号について場合分け
+			6'd0: opr_gen = operation;
+			6'd1: opr_gen = 5'd0;	// add
+			6'd4: opr_gen = 5'd8;	// and
+			6'd5: opr_gen = 5'd9;	// or
+			6'd6: opr_gen = 5'd10;	// xor
+			6'd36: opr_gen = 5'd2;  // sub, bgt0_subはop36番
+			default: opr_gen = 5'h1f;
+		endcase
    endfunction
 
   function [31:0] alu;
       input [4:0] opr, shift;
       input [31:0] operand1, operand2;
       case (opr)
-        5'd0: alu = operand1 + operand2;
-        5'd1: alu = operand1 - operand2;
-        5'd8: alu = operand1 & operand2;
-        5'd9: alu = operand1 | operand2;
-        5'd10: alu = operand1 ^ operand2;
-        5'd11: alu = ~ (operand1 & operand2);
-        5'd16: alu = operand1 << shift;
-        5'd17: alu = operand1 >> shift;
-        5'd18: alu = operand1 >>> shift;
+			5'd0: alu = operand1 + operand2;
+			5'd2: alu = operand1 - operand2;
+			5'd8: alu = operand1 & operand2;
+			5'd9: alu = operand1 | operand2;
+			5'd10: alu = operand1 ^ operand2;
+			5'd11: alu = ~ (operand1 & operand2);
+			5'd16: alu = operand1 << shift;
+			5'd17: alu = operand1 >> shift;
+			5'd18: alu = operand1 >>> shift;
 	      default: alu = 32'hffffffff;
       endcase
   endfunction
@@ -50,12 +51,12 @@ module execute (clk, ins, pc, reg1, reg2, wra, result, nextpc);
       input [5:0]  op;
       input [31:0] alu_result, dpl_imm, dm_r_data, pc;
       case (op)
-        6'd0, 6'd1, 6'd4, 6'd5, 6'd6: calc = alu_result;
+        6'd0, 6'd1, 6'd4, 6'd5, 6'd6, 6'd36: calc = alu_result; //36番の命令でaluの結果を使う
         6'd3: calc = dpl_imm << 16;
         6'd16: calc = dm_r_data;
         6'd18: calc = {{16{dm_r_data[15]}}, dm_r_data[15:0]};
         6'd20: calc = {{24{dm_r_data[7]}}, dm_r_data[7:0]};
-        6'd41: calc = pc+32'd1;
+		6'd36: calc = {{}}
         default: calc = 32'hffffffff;
       endcase
    endfunction
@@ -68,6 +69,7 @@ module execute (clk, ins, pc, reg1, reg2, wra, result, nextpc);
         6'd33: npc = (reg1 != reg2)? branch : nonbranch;
         6'd34: npc = (reg1 < reg2)? branch : nonbranch;
         6'd35: npc = (reg1 <= reg2)? branch : nonbranch;
+		6'd36: npc = (reg1 < reg2)? branch : nonbranch; // rt - rs > 0 より rs < rt
         6'd40, 6'd41: npc = addr;
         6'd42: npc = reg1;
         default: npc = nonbranch;
@@ -80,6 +82,7 @@ module execute (clk, ins, pc, reg1, reg2, wra, result, nextpc);
       case (op)
         6'd0: wreg = rd;
         6'd1, 6'd3, 6'd4, 6'd5, 6'd6, 6'd16, 6'd18, 6'd20: wreg = rt;
+		6'd36: wreg = rt;
         6'd41: wreg = 5'd31;
         default: wreg = 5'd0;
       endcase
@@ -99,7 +102,7 @@ module execute (clk, ins, pc, reg1, reg2, wra, result, nextpc);
    assign shift = ins [10:6] ;
    assign operation = ins [4:0] ;
    assign dpl_imm = {{16{ins[15]}} , ins [15:0]};
-   assign operand2 = (op == 6'd0) ? reg2: dpl_imm;
+   assign operand2 = (op == 6'd0) ? reg2:((op == 6'd36) ? reg1 : dpl_imm); // 即値にrtをつかう．本当に??
    assign alu_result = alu (opr_gen (op, operation) , shift, reg1, operand2);
    assign mem_address = reg1 + dpl_imm >>> 2;
    assign wren = wrengen(op);
