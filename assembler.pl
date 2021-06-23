@@ -202,7 +202,7 @@ while ($line = <FH>) {
     print("\n");
   }  
   elsif ($op eq "bgt0_sub"){
-    p_b(6, 36); # 番号はよくわからん
+    p_b(6, 36); # 番号はよくわからん，分岐命令の連番で決めた．
     p_r2b($f2, $f3);
     p_b(16, $labels{$f4}-$i-1);
     print("\n");
