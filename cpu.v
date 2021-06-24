@@ -1,8 +1,13 @@
 module fetch (pc, ins);
-  input [31:0] pc;
+  input [7:0] pc;   //32bitの値はでかすぎるだろ
   output [31:0] ins;
-  reg [31:0] 	 ins_mem[0:255];
+  reg [31:0] ins_mem[0:255];
   assign ins = ins_mem[pc];
+  initial begin
+    // $readmemb("sample34.bnr", ins_mem);
+    $readmemb("add.bnr", ins_mem);
+
+  end
 endmodule
 
 module execute (clk, ins, pc, reg1, reg2, wra, result, nextpc);
@@ -25,7 +30,7 @@ module execute (clk, ins, pc, reg1, reg2, wra, result, nextpc);
 			6'd4: opr_gen = 5'd8;	// and
 			6'd5: opr_gen = 5'd9;	// or
 			6'd6: opr_gen = 5'd10;	// xor
-			6'd36: opr_gen = 5'd2;  // sub, bgt0_subはop36番
+			6'd36: opr_gen = 5'd20;  // sub, bgt0_subはop36番
 			default: opr_gen = 5'h1f;
 		endcase
    endfunction
@@ -34,15 +39,16 @@ module execute (clk, ins, pc, reg1, reg2, wra, result, nextpc);
       input [4:0] opr, shift;
       input [31:0] operand1, operand2;
       case (opr)
-			5'd0: alu = operand1 + operand2;
-			5'd2: alu = operand1 - operand2;
-			5'd8: alu = operand1 & operand2;
-			5'd9: alu = operand1 | operand2;
-			5'd10: alu = operand1 ^ operand2;
-			5'd11: alu = ~ (operand1 & operand2);
-			5'd16: alu = operand1 << shift;
-			5'd17: alu = operand1 >> shift;
-			5'd18: alu = operand1 >>> shift;
+        5'd0: alu = operand1 + operand2;
+        5'd2: alu = operand1 - operand2;
+        5'd8: alu = operand1 & operand2;
+        5'd9: alu = operand1 | operand2;
+        5'd10: alu = operand1 ^ operand2;
+        5'd11: alu = ~ (operand1 & operand2);
+        5'd16: alu = operand1 << shift;
+        5'd17: alu = operand1 >> shift;
+        5'd18: alu = operand1 >>> shift;
+        5'd20: alu = operand2 - operand1;  //追加
 	      default: alu = 32'hffffffff;
       endcase
   endfunction
@@ -56,7 +62,6 @@ module execute (clk, ins, pc, reg1, reg2, wra, result, nextpc);
         6'd16: calc = dm_r_data;
         6'd18: calc = {{16{dm_r_data[15]}}, dm_r_data[15:0]};
         6'd20: calc = {{24{dm_r_data[7]}}, dm_r_data[7:0]};
-		6'd36: calc = {{}}
         default: calc = 32'hffffffff;
       endcase
    endfunction
@@ -69,7 +74,7 @@ module execute (clk, ins, pc, reg1, reg2, wra, result, nextpc);
         6'd33: npc = (reg1 != reg2)? branch : nonbranch;
         6'd34: npc = (reg1 < reg2)? branch : nonbranch;
         6'd35: npc = (reg1 <= reg2)? branch : nonbranch;
-		6'd36: npc = (reg1 < reg2)? branch : nonbranch; // rt - rs > 0 より rs < rt
+		    6'd36: npc = (reg1 < reg2)? branch : nonbranch; // rt - rs > 0 より rs < rt
         6'd40, 6'd41: npc = addr;
         6'd42: npc = reg1;
         default: npc = nonbranch;
@@ -82,7 +87,7 @@ module execute (clk, ins, pc, reg1, reg2, wra, result, nextpc);
       case (op)
         6'd0: wreg = rd;
         6'd1, 6'd3, 6'd4, 6'd5, 6'd6, 6'd16, 6'd18, 6'd20: wreg = rt;
-		6'd36: wreg = rt;
+		    6'd36: wreg = rt;
         6'd41: wreg = 5'd31;
         default: wreg = 5'd0;
       endcase
@@ -102,7 +107,7 @@ module execute (clk, ins, pc, reg1, reg2, wra, result, nextpc);
    assign shift = ins [10:6] ;
    assign operation = ins [4:0] ;
    assign dpl_imm = {{16{ins[15]}} , ins [15:0]};
-   assign operand2 = (op == 6'd0) ? reg2:((op == 6'd36) ? reg1 : dpl_imm); // 即値にrtをつかう．本当に??
+   assign operand2 = (op == 6'd0) ? reg2:((op == 6'd36) ? reg2 : dpl_imm); // 即値にrtをつかう．本当に??
    assign alu_result = alu (opr_gen (op, operation) , shift, reg1, operand2);
    assign mem_address = reg1 + dpl_imm >>> 2;
    assign wren = wrengen(op);
@@ -157,12 +162,16 @@ endmodule
 
 module computer(clk, rstd);
    input clk, rstd;
-   wire [31:0] pc, ins, reg1,reg2, result, nextpc;
+   wire [31:0] pc, ins, reg1, reg2, result, nextpc;
    wire [4:0]  wra;
    wire [3:0]  wren;
    fetch fetch_body (pc[7:0], ins);
    execute execute_body (clk, ins, pc, reg1, reg2, wra, result, nextpc);
    writeback writeback_body (clk, rstd, nextpc, pc);
    reg_file rf_body (clk, rstd, result, ins[25:21], ins[20:16], wra, (~| wra) , reg1, reg2);
-   intial $monitor($time, "rstd=%d, clk=%d, pc=%h, ins=%h, wra=%h, regl=%h, reg2=%h", rstd, clk, pc, ins, wra, reg1, reg2);
+
+  initial begin
+    $monitor($time, ":rstd=%d, clk=%d, pc=%h, ins=%h, wra=%h, reg1=%h, reg2=%h", rstd, clk, pc, ins, wra, reg1, reg2);
+  end
+
 endmodule
