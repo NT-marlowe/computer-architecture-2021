@@ -2,17 +2,18 @@ module fetch (pc, ins);
   input [7:0] pc;   //32bitの値はでかすぎるだろ
   output [31:0] ins;
   reg [31:0] ins_mem[0:255];
-  assign ins = ins_mem[pc];
   initial begin
     // $readmemb("sample34.bnr", ins_mem);
-    $readmemb("add.bnr", ins_mem);
+     $readmemb("/home/denjo/Documents/Assignment/arch21/computer-architecture-2021/sample35.bnr", ins_mem);
+  //  $readmemb("add2.bnr", ins_mem);
 
   end
+  assign ins = ins_mem[pc];
 endmodule
 
 module execute (clk, ins, pc, reg1, reg2, wra, result, nextpc);
 	input clk;
-	input [31:0] ins, pc, reg1, reg2;
+	input [31:0] ins, pc, reg1, reg2; 
 	output [4:0] wra;
 	output [31:0] result, nextpc;
 	wire [5:0] 	 op;
@@ -45,7 +46,7 @@ module execute (clk, ins, pc, reg1, reg2, wra, result, nextpc);
         5'd9: alu = operand1 | operand2;
         5'd10: alu = operand1 ^ operand2;
         5'd11: alu = ~ (operand1 & operand2);
-        5'd16: alu = operand1 << shift;
+        5'd16: alu = operand1 << shift; 
         5'd17: alu = operand1 >> shift;
         5'd18: alu = operand1 >>> shift;
         5'd20: alu = operand2 - operand1;  //追加
@@ -171,7 +172,7 @@ module computer(clk, rstd);
    reg_file rf_body (clk, rstd, result, ins[25:21], ins[20:16], wra, (~| wra) , reg1, reg2);
 
   initial begin
-    $monitor($time, ":rstd=%d, clk=%d, pc=%h, ins=%h, wra=%h, reg1=%h, reg2=%h", rstd, clk, pc, ins, wra, reg1, reg2);
+    $monitor($time, ":rstd=%d, clk=%d, pc=%h, ins=%h, wra=%h, reg1=%h, reg2=%h, result=%h", rstd, clk, pc, ins, wra, reg1, reg2, result );
   end
 
 endmodule

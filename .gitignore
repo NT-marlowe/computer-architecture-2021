@@ -7,6 +7,13 @@
 *.pm.tdy
 *.bs
 a.out
+*.bnr
+
+# Vivado project directory
+project*/
+
+# vcd file for gtkwave
+*.vcd
 
 # Devel::Cover
 cover_db/
