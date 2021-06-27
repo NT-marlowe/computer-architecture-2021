@@ -3,10 +3,7 @@ module fetch (pc, ins);
   output [31:0] ins;
   reg [31:0] ins_mem[0:255];
   initial begin
-    // $readmemb("sample34.bnr", ins_mem);
-     $readmemb("/home/denjo/Documents/Assignment/arch21/computer-architecture-2021/sample35.bnr", ins_mem);
-  //  $readmemb("add2.bnr", ins_mem);
-
+    $readmemb("/home/denjo/Documents/Assignment/arch21/computer-architecture-2021/sample35.bnr", ins_mem);
   end
   assign ins = ins_mem[pc];
 endmodule
@@ -73,9 +70,9 @@ module execute (clk, ins, pc, reg1, reg2, wra, result, nextpc);
       case (op)
         6'd32: npc = (reg1 == reg2)? branch : nonbranch;
         6'd33: npc = (reg1 != reg2)? branch : nonbranch;
-        6'd34: npc = (reg1 < reg2)? branch : nonbranch;
+        6'd34, 6'd36: npc = (reg1 < reg2)? branch : nonbranch;
         6'd35: npc = (reg1 <= reg2)? branch : nonbranch;
-		    6'd36: npc = (reg1 < reg2)? branch : nonbranch; // rt - rs > 0 より rs < rt
+		    // 6'd36: npc = (reg1 < reg2)? branch : nonbranch; // rt - rs > 0 より rs < rt
         6'd40, 6'd41: npc = addr;
         6'd42: npc = reg1;
         default: npc = nonbranch;
@@ -172,7 +169,8 @@ module computer(clk, rstd);
    reg_file rf_body (clk, rstd, result, ins[25:21], ins[20:16], wra, (~| wra) , reg1, reg2);
 
   initial begin
-    $monitor($time, ":rstd=%d, clk=%d, pc=%h, ins=%h, wra=%h, reg1=%h, reg2=%h, result=%h", rstd, clk, pc, ins, wra, reg1, reg2, result );
+    // $monitor($time, ":rstd=%d, clk=%d, pc=%h, ins=%h, wra=%h, reg1=%h, reg2=%h, result=%h", rstd, clk, pc, ins, wra, reg1, reg2, result );
+    $monitor($time, " | result = %h", result);
   end
 
 endmodule
